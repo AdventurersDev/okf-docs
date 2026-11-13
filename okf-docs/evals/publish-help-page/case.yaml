@@ -1,0 +1,60 @@
+schema_version: "1.1"
+name: publish-help-page
+description: >-
+  With a voice.md in place, a help page about too-large exports is written as a public page
+  with no retired credibility label and no draft status, that cites the export doc, states the 500 MB limit, claims no human review, and is put to the
+  user for sign-off.
+tags: [publish]
+execution:
+  prompt: Write a help page for people whose export fails because it's too large.
+  max_turns: 40
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Bash]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?okf-docs"'
+  - name: page-file
+    type: regex
+    target: files
+    flags: m
+    pattern: '(?:^|/)help/(?:[a-z0-9-]+/)*(?!index\.md$|log\.md$|voice\.md$|export-your-data\.md$)[a-z0-9-]+\.md$'
+  - name: public-page
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*/help/)(?=.*x-okfdocs-visibility: public)'
+  - name: no-credibility-label
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*/help/)(?=.*credibility:)'
+    min: 0
+    max: 0
+  - name: no-draft-status
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*/help/)(?=.*status: draft)'
+    min: 0
+    max: 0
+  - name: cites-the-export-doc
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*/help/)(?=.*resource: (?:\.\./)+docs/product/data-export\.md)'
+  - name: states-the-limit
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*/help/)(?=.*500\s?MB)'
+  - name: no-invented-review
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*/help/)(?=.*by: human:)'
+    min: 0
+    max: 0
+  - name: asks-for-sign-off
+    type: llm
+    criteria: >-
+      PASS if the final reply names the new help page, says which source it was built from,
+      and asks the user to review or sign it off, without claiming it is already reviewed or
+      published. FAIL otherwise.

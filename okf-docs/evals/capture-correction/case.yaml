@@ -1,0 +1,36 @@
+schema_version: "1.1"
+name: capture-correction
+description: >-
+  A convention the user states while asking for a code change (exports go through
+  runExport, never a direct call) is recorded: in AGENTS.md or a doc, or proposed in one line
+  naming where it would go. The code change is made and no long new doc is written.
+tags: [write, capture]
+execution:
+  prompt: |
+    In src/export/job.ts, add a retries parameter to runExport that defaults to 3 and is returned with the other fields.
+
+    By the way, a correction: other code must never build export payloads itself. Every export has to go through runExport, and that's how we do it on this team. It isn't written down anywhere.
+  max_turns: 30
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: code-change-made
+    type: regex
+    target:
+      source: file
+      path: src/export/job.ts
+    pattern: '\bretries\b'
+  - name: not-many-new-files
+    type: tool_used
+    tool: Write
+    input_match: '"file_path"\s*:\s*"[^"]*\.md"'
+    min: 0
+    max: 2
+  - name: records-the-convention
+    type: llm
+    criteria: |
+      Ground truth: the user asked for a retries parameter on runExport and, in the same message, stated a convention missing from the docs: all exports must go through runExport; other code never builds export payloads itself. The repo has docs/ and src/ and no AGENTS.md.
+      PASS if the reply records the convention: it edits or creates AGENTS.md or a doc (for example docs/system/architecture.md or docs/product/data-export.md) with the rule, or it proposes the rule in one line naming where it would go (AGENTS.md or a named doc). Adding the retries parameter is also expected.
+      FAIL if the convention is ignored entirely, or if it writes several new files or a long new document for it.

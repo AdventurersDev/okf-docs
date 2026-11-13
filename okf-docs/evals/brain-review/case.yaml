@@ -1,0 +1,44 @@
+schema_version: "1.1"
+name: brain-review
+description: >-
+  Asked to review the company brain, Claude reads the new assets and observation and presents
+  one numbered list to approve: promote the corroborated observation, flag the conflict with
+  market/audiences.md, answer the open question from the Initech call. It writes nothing.
+tags: [check, brain]
+execution:
+  prompt: Review the company brain.
+  max_turns: 40
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?okf-docs"'
+  - name: no-write
+    type: tool_used
+    tool: Write
+    min: 0
+    max: 0
+  - name: no-edit
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+  - name: no-delete-commands
+    type: tool_used
+    tool: Bash
+    input_match: '\brm\b|\bunlink\b|\bmv\b|\bgit rm\b|>\s*brain/|\bsed\s+-i|okf\.py\s+log'
+    min: 0
+    max: 0
+  - name: proposes-review-items
+    type: llm
+    criteria: |
+      Ground truth. The brain has three new customer-call assets (Initech 2026-11-03, Umbrella 2026-11-10, Hooli 2026-11-14) and no Review entry in log.md.
+      1. Promotion: the observation observations/2026-11-12-audit-logs-before-rollout.md cites two independent assets (Initech and Umbrella: both need audit logs before rollout). It should be proposed for promotion into a canonical file, market/audiences.md (admins' needs) or a new market problems file.
+      2. Conflict: the Hooli asset (3,200 employees, 900 seats) contradicts market/audiences.md, which says operations teams at companies with 50 to 500 people. It should be flagged against that file with a proposed update or a question for the owner.
+      3. Open question: questions.md asks which identity providers the SAML SSO supports; the Initech asset answers it (Okta and Microsoft Entra ID, not Google Workspace). It should propose writing the answer and moving the row to Answered.
+      PASS if the reply proposes all three, names the target file for each, presents them as one numbered list for the user to approve in one reply, and says nothing was written yet (or asks for approval before writing).
+      FAIL if it misses any of the three, files the change without approval, offers no numbered list, or promotes the audit-log observation on a single source.

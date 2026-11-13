@@ -1,0 +1,23 @@
+{
+  "name": "okf-docs",
+  "displayName": "OKF Docs",
+  "version": "1.0.5",
+  "description": "Documentation built on the Open Knowledge Format (OKF): repo docs and AGENTS.md for coding agents, a company brain for team and business knowledge, and public help, developer and changelog pages without AI bloat. One skill, six commands: init, write, ask, check, sync, publish.",
+  "author": {
+    "name": "tgundhus"
+  },
+  "homepage": "https://github.com/AdventurersDev/okf-docs",
+  "repository": "https://github.com/AdventurersDev/okf-docs",
+  "license": "Apache-2.0",
+  "keywords": [
+    "documentation",
+    "okf",
+    "open-knowledge-format",
+    "knowledge-base",
+    "agents-md",
+    "adr",
+    "changelog",
+    "help-center",
+    "docs-as-code"
+  ]
+}

@@ -1,0 +1,55 @@
+schema_version: "1.1"
+name: upgrade-legacy
+description: >-
+  Check on docs written by the older okf skills finds the old format and offers an upgrade
+  that shows the changes first, and proposes retiring the old skill copy in .claude/skills,
+  without changing any file.
+tags: [check, upgrade]
+execution:
+  prompt: /okf-docs check
+  max_turns: 30
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Bash]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: context-ran
+    type: tool_used
+    tool: Bash
+    input_match: 'okf\.py[\s\S]*\bcontext\b'
+  - name: no-write
+    type: tool_used
+    tool: Write
+    min: 0
+    max: 0
+  - name: no-edit
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+  - name: no-real-upgrade
+    type: tool_used
+    tool: Bash
+    input_match: '"command"\s*:\s*"(?:[^"\\]|\\.)*\bupgrade\b(?!(?:[^"\\]|\\.)*--dry-run)'
+    min: 0
+    max: 0
+  - name: no-fix-before-approval
+    type: tool_used
+    tool: Bash
+    input_match: '"command"\s*:\s*"(?:[^"\\]|\\.)*\bcheck\b(?:[^"\\]|\\.)*--fix'
+    min: 0
+    max: 0
+  - name: offers-upgrade
+    type: llm
+    criteria: >-
+      PASS if the reply says the docs use an older format (from earlier okf skills), offers to
+      upgrade them, says what the upgrade would change (for example frontmatter fields such as
+      credibility, verified, links or timestamps), and asks for approval before changing
+      anything. FAIL if it says it already upgraded files, or doesn't offer an upgrade.
+  - name: retires-old-rules
+    type: llm
+    criteria: >-
+      PASS if the reply names the old okf-company-brain file in .claude/skills and proposes, or
+      asks approval for, removing, retiring or updating it. Offering to delete it counts, also
+      as one item in a numbered list of proposals. FAIL only if the reply doesn't mention that
+      file at all, or says it already removed or changed it.

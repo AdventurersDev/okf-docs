@@ -1,0 +1,46 @@
+schema_version: "1.1"
+name: document-code
+description: >-
+  Documenting code adds a doc to the docs bundle that cites the code, states the exact value,
+  records the plugin as author with a timestamp, and claims no human review.
+tags: [write]
+execution:
+  prompt: Document how user sessions expire. The logic is in src/auth/session.ts.
+  max_turns: 40
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?okf-docs"'
+  - name: new-doc-in-bundle
+    type: regex
+    target: files
+    pattern: '(?:^|/)docs/(?:[a-z0-9-]+/)+(?!index\.md$|log\.md$)[a-z0-9-]+\.md$'
+    flags: m
+  - name: cites-the-code
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*docs/)(?=.*resource: (?:\\")?(?:\.\./)+src/auth/session\.ts)'
+  - name: states-the-value
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*docs/)(?=.*\b12[ -]hours?\b)'
+  - name: plugin-provenance
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*docs/)(?=.*generated:\\n\s+by: okf-docs/\d+\.\d+\.\d+\\n\s+at: \d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?(?:Z|[+-]\d\d:\d\d))'
+  - name: no-invented-review
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*docs/(?!product/data-export\.md|system/architecture\.md|decisions/00[12]-)[^"]*")(?=.*by: human:)'
+    min: 0
+    max: 0
+  - name: ran-check
+    type: tool_used
+    tool: Bash
+    input_match: 'okf\.py[\s\S]*\bcheck\b'
+    arm: with-only

@@ -1,0 +1,4 @@
+okf-docs/evals/results/
+__pycache__/
+dist/
+.DS_Store

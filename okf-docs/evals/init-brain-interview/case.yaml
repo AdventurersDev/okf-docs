@@ -1,0 +1,37 @@
+schema_version: "1.1"
+name: init-brain-interview
+description: >-
+  Asked to set up a company brain, the skill reads the README, reports what it found, and starts
+  an interview about how the company works (at most four questions) before writing anything.
+tags: [init, brain]
+execution:
+  prompt: Set up a company brain for us.
+  max_turns: 40
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?okf-docs"'
+  - name: no-config-yet
+    type: file_exists
+    path: .okf/config.yaml
+    exists: false
+  - name: no-brain-yet
+    type: file_exists
+    path: 'brain/**'
+    exists: false
+  - name: no-edits
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+  - name: interviews-about-the-company
+    type: llm
+    criteria: |
+      The workspace is a README for Northwind Studio, a six-person Rotterdam agency that builds Shopify stores: store builds, care plans and audits, referral clients (food and apparel brands), two-week sprints, Linear and Google Drive. There are no docs and no brain.
+      PASS if the reply (1) reports what it read from the README, naming at least two concrete things (for example the three offerings, the team, the tools); (2) either asks at least one question about how the company works (offerings, customers, selling, delivery, people and ownership, or terms), or asks its settings questions first and says that an interview about how the company works follows, naming at least two of those areas; (3) its questions are specific to Northwind and don't ask what the README already says (confirming it is fine); and (4) ends by waiting for answers before writing anything.
+      FAIL if it says it created or changed files, asks a generic questionnaire or asks what the README already answers, asks only about settings without saying a company interview follows, or reports nothing specific from the README.

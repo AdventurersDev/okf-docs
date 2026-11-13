@@ -1,0 +1,41 @@
+schema_version: "1.1"
+name: init-plans-first
+description: >-
+  Asked to set up docs, the skill scans the project, reports what it found, asks about the gaps
+  or proposes a plan, and writes nothing before the user approves.
+tags: [init]
+execution:
+  prompt: Set up documentation for this project.
+  max_turns: 40
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?okf-docs"'
+  - name: no-config-yet
+    type: file_exists
+    path: .okf/config.yaml
+    exists: false
+  - name: no-docs-yet
+    type: file_exists
+    path: 'docs/**'
+    exists: false
+  - name: no-agents-md-yet
+    type: file_exists
+    path: AGENTS.md
+    exists: false
+  - name: no-edits
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+  - name: plan-from-the-scan
+    type: llm
+    criteria: |
+      The project is a small TypeScript invoicing API: package.json scripts (dev, build, test, migrate), src/server.ts and src/invoices.ts, an OpenAPI spec (openapi.yaml), a SQL migration, and a five-line README. It has no docs folder.
+      PASS if the reply (1) reports what it found, naming at least two of those concrete things; (2) asks questions specific to this project (each answer would change the plan), or proposes a plan that names the config file and the first docs it would create; and (3) ends by waiting for the user's answers or approval before writing anything.
+      FAIL if it says it created or changed files, asks generic questions the scan already answers, or gives a generic plan that names nothing from this project.

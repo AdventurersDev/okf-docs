@@ -1,0 +1,37 @@
+schema_version: "1.1"
+name: refactor-no-new-docs
+description: >-
+  A rename in a project with OKF docs changes no documented fact, so Claude makes the code
+  change and writes no docs: no new file, no decision, no doc edits.
+tags: [routing, write]
+execution:
+  prompt: In src/export/job.ts, rename the format parameter of runExport to exportFormat.
+  max_turns: 20
+  timeout_seconds: 300
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Bash]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: renamed
+    type: regex
+    target:
+      source: file
+      path: src/export/job.ts
+    # The parameter is renamed; a kept `{ format: exportFormat }` return key is fine.
+    pattern: '^(?=[\s\S]*\brunExport\(\s*exportFormat\b)(?![\s\S]*\brunExport\(\s*format\b)'
+  - name: no-new-doc-files
+    type: tool_used
+    tool: Write
+    input_match: '"file_path"\s*:\s*"[^"]*/(?:docs|help)/'
+    min: 0
+    max: 0
+  - name: no-doc-edits
+    type: tool_used
+    tool: Edit
+    input_match: '"file_path"\s*:\s*"[^"]*/(?:docs|help)/'
+    min: 0
+    max: 0
+  - name: no-new-decision
+    type: file_exists
+    path: 'docs/decisions/003-*.md'
+    exists: false

@@ -1,0 +1,35 @@
+schema_version: "1.1"
+name: meeting-command
+description: >-
+  `/okf-docs meeting <file>` with a transcript file outside the brain: the skill reads the file,
+  restates the meeting, previews the one clear decision and action, and writes nothing yet.
+tags: [write, brain, ingest, routing]
+execution:
+  prompt: "/okf-docs meeting notes/2026-11-19-initech-pilot-kickoff.txt"
+  max_turns: 40
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  # A slash command loads the skill without a Skill tool call, so there is no skill-fired grader.
+  - name: read-the-transcript
+    type: tool_used
+    tool: Read
+    input_match: 'initech-pilot-kickoff\.txt'
+  - name: no-write-before-approval
+    type: tool_used
+    tool: Write
+    min: 0
+    max: 0
+  - name: no-edit-before-approval
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+  - name: meeting-preview
+    type: llm
+    criteria: |
+      Ground truth: an internal Initech pilot kickoff on 2026-11-19 between Priya (head of product) and Sam (customer success). One clear decision: the Initech pilot runs with 25 seats (Priya; Initech had asked for 50). One clear action: Sam sets up the pilot workspace by Monday 2026-11-23. Look-alikes: "we should write a pilot guide" (no owner, no commitment) and "give them SSO early?" (a thought, not decided).
+      PASS only if the reply (1) restates the meeting briefly (an internal kickoff for the Initech pilot); (2) lists the 25-seat pilot as a decision and Sam's workspace setup as an action with Sam as owner and the 23rd as due date; (3) does not record the pilot guide or early SSO as a decision or action (listing them as unclear or as questions is fine); (4) shows where things would be written and waits for approval.
+      FAIL if it treats the request as a docs audit instead of taking in the meeting, says it already wrote files, records a look-alike, or misses the decision or the action.

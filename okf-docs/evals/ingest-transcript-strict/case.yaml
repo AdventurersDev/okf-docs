@@ -1,0 +1,62 @@
+schema_version: "1.1"
+name: ingest-transcript-strict
+description: >-
+  A messy transcript with one clear decision, one clear action and several look-alikes: the skill
+  previews before writing, extracts only the clear items with owner and due date, and asks about
+  the unclear ones instead of recording them.
+tags: [write, brain, ingest]
+execution:
+  prompt: |
+    Add this meeting to the brain.
+
+    Pricing and renewals sync, 2026-11-18. Priya (head of product), Tom (account lead), Lena (design). Marcus is out.
+
+    [00:00:12] Priya: ok, everyone here? Marcus is out so we skip the support numbers today.
+    [00:00:41] Tom: Globex renewal first. They're asking for 15% off the annual plan, and honestly they have a point, the export thing burned them.
+    [00:01:20] Priya: I'd say 10% max. Maybe we tie it to a two-year term? Just thinking out loud.
+    [00:01:52] Tom: mm. Anyway, they need an answer soon.
+    [00:02:15] Lena: can I jump in, the new onboarding screens, are those blocked on pricing?
+    [00:02:30] Priya: no, unrelated. Ok, Starter. The Starter plan stays at 19 a month through 2027. No increase. That's decided, I don't want to reopen it.
+    [00:03:05] Tom: Fine by me.
+    [00:03:20] Lena: we should probably look into whether annual billing confuses people, I keep hearing that
+    [00:03:48] Priya: yeah, worth a look at some point.
+    [00:04:30] Tom: I'll send Globex the renewal quote by Friday the 20th. Priya, you'll okay the number first?
+    [00:04:41] Priya: send me the draft tonight and I'll okay it tomorrow.
+    [00:05:10] Tom: done, tonight.
+    [00:05:34] Lena: so who updates the pricing deck? it still shows the old Team tier
+    [00:05:50] Priya: someone needs to do that, yeah. Before the board call ideally.
+    [00:06:12] Tom: right
+    [00:06:40] Lena: random idea, what if we sold the onboarding templates as a paid pack?
+    [00:06:55] Priya: ha, maybe. Interesting. Park it.
+    [00:07:30] Tom: what about the support tiers, do we change the response targets for Team?
+    [00:07:48] Priya: that's Marcus's call, he owns support. He can decide when he's back.
+    [00:08:20] Lena: ok. I have a hard stop at the top of the hour
+    [00:08:31] Priya: yep, wrapping up. Thanks all.
+  max_turns: 50
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?okf-docs"'
+  - name: no-decision-file-written-before-approval
+    type: tool_used
+    tool: Write
+    input_match: '"file_path"\s*:\s*"[^"]*brain/decisions/'
+    min: 0
+    max: 0
+  - name: no-decision-file-edited-before-approval
+    type: tool_used
+    tool: Edit
+    input_match: '"file_path"\s*:\s*"[^"]*brain/decisions/'
+    min: 0
+    max: 0
+  - name: strict-preview
+    type: llm
+    criteria: |
+      The transcript holds exactly one clear decision (the Starter plan stays at 19 a month through 2027, decided by Priya) and one clear main action (Tom sends Globex the renewal quote by Friday 2026-11-20). Its two committed sub-steps, Tom sending Priya the draft that night and Priya okaying it the next day, are also acceptable as actions, listed separately or folded into the main one. Everything else is a look-alike: Priya's 10% discount and two-year-term idea (a proposal nobody agreed to), "look into whether annual billing confuses people" (no owner), "someone needs to update the pricing deck" (no owner), the paid onboarding-template pack (an idea), and the Team support response targets (deferred to Marcus, who is absent).
+      PASS only if the reply (1) shows a preview and waits for approval before writing; (2) lists the Starter price decision as a decision and Tom's renewal quote as an action with Tom as owner and the Friday 20th due date; (3) does not present any look-alike as a decision or an action; and (4) asks about at least one unclear item, such as who updates the deck, whether the 10% offer was agreed, or whether Marcus decides support targets.
+      FAIL if it says it has already written files, records any look-alike as a decision or action, gives the action no owner or due date, or asks nothing about the unclear items.

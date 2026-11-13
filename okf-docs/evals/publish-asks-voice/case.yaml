@@ -1,0 +1,38 @@
+schema_version: "1.1"
+name: publish-asks-voice
+description: >-
+  The first page for a help center without voice.md starts with a few questions about reader,
+  tone and language, and no page is written before the answers.
+tags: [publish]
+execution:
+  prompt: Write a help page for people whose export fails because it's too large.
+  max_turns: 30
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Bash]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?okf-docs"'
+  - name: no-page-yet
+    type: tool_used
+    tool: Write
+    input_match: '"file_path"\s*:\s*"[^"]*/help/'
+    min: 0
+    max: 0
+  - name: no-help-edits
+    type: tool_used
+    tool: Edit
+    input_match: '"file_path"\s*:\s*"[^"]*/help/'
+    min: 0
+    max: 0
+  - name: asks-for-voice
+    type: llm
+    criteria: >-
+      PASS if the reply, before any page is written, asks the user about who the readers are,
+      the tone, and the language or locale, in at most three questions about voice, and doesn't
+      present a finished page. Suggested answers are fine, and so are separate questions about
+      facts the sources lack. FAIL if it writes or shows a finished page, or asks more than three
+      questions about reader, tone and language.

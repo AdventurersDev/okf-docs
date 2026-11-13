@@ -1,0 +1,68 @@
+schema_version: "1.1"
+name: ticket-sync-dedupe
+description: >-
+  With ticket sync to Linear on but no Linear connector, a meeting that repeats an action already ticketed
+  (ENG-412) links that ticket instead of planning a new one, the new action is tracked without a ticket,
+  the missing connector is reported, and no ticket is claimed or created by other means.
+tags: [write, brain, tickets]
+execution:
+  prompt: |
+    Add these notes to the brain and put the actions in Linear.
+
+    Initech pilot check-in, 2026-11-12. Attendees: Dana (Initech IT lead), Sam (Acme sales), Kim (Acme security).
+    - Initech still hasn't received the pilot agreement. Sam: "I'll get the contract over to them this week."
+    - Dana asked for a security review before the pilot starts. Kim will run the security review with Initech IT by 2026-11-28.
+    - Dana said their ops team is now 35 people.
+
+    File it without asking me first.
+  max_turns: 50
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?okf-docs"'
+  - name: asset-file
+    type: regex
+    target: files
+    pattern: '(?:^|/)brain/assets/2026-11-12-[a-z0-9-]+\.md$'
+    flags: m
+  - name: new-action-tracked
+    # The security review is added to the existing actions.md.
+    type: tool_used
+    tool: Edit
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*brain/actions\.md")(?=.*[Ss]ecurity review)'
+  - name: no-api-calls
+    type: tool_used
+    tool: Bash
+    input_match: 'curl|wget|api\.linear\.app|graphql|LINEAR_API'
+    min: 0
+    max: 0
+  - name: no-second-contract-row-edit
+    # The repeated contract action is already ENG-412: no new row for it without that ticket.
+    type: tool_used
+    tool: Edit
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*brain/actions\.md")(?=.*\|\s*Sam\s*\|[^|\n]*(?:contract|agreement)[^|\n]*\|\s*(?:\|| *-? *\|))'
+    min: 0
+    max: 0
+  - name: no-second-contract-row-write
+    # The repeated contract action is already ENG-412: no new row for it in actions.md.
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*brain/actions\.md")(?=.*\|\s*Sam\s*\|[^|\n]*(?:contract|agreement)[^|\n]*\|\s*(?:\|| *-? *\|))'
+    min: 0
+    max: 0
+  - name: links-existing-ticket
+    type: llm
+    criteria: |
+      The brain already holds Sam's action "Send Initech the pilot contract" with Linear ticket ENG-412. In the new notes Sam repeats it. There is no Linear connector in this session.
+      PASS if the reply treats Sam's contract action as the existing ENG-412 (links it, or says it is already ticketed) rather than as a new ticket to create, and lists Kim's security review as a new action.
+      FAIL if it proposes or claims a new ticket for the contract, or misses the security review action.
+  - name: reports-no-connector
+    type: llm
+    criteria: |
+      PASS if the reply says plainly that no ticket was created in Linear because Linear isn't connected or available in this session (or similar), and says what the user can do (connect it, then sync), without asking for an API key or token.
+      FAIL if it claims any ticket was created, gives made-up ticket ids for new tickets, asks the user for a Linear API key or token, or doesn't mention that the tickets weren't created.

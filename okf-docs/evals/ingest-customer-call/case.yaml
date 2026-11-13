@@ -1,0 +1,57 @@
+schema_version: "1.1"
+name: ingest-customer-call
+description: >-
+  A follow-up call with a customer the brain already knows: the skill restates the meeting, connects
+  it to the earlier call and existing files, skips the need already recorded, proposes the new need
+  as an observation with a short quote, flags the contradiction with a stored finding as a conflict, extracts the clear
+  commitment and ignores the look-alike, all before writing.
+tags: [write, brain, ingest]
+execution:
+  prompt: |
+    Add this call to the brain.
+
+    Follow-up call with Globex, 2026-11-20. Marta (Globex operations lead), Dev (Globex admin), Sam (Acme sales).
+
+    [00:00:10] Sam: thanks for making time. Last time we covered exports and SSO, so let's pick up there.
+    [00:00:35] Marta: right. The SSO question is still the big one for us. Our admins won't roll Acme out to everyone without SAML.
+    [00:01:05] Sam: understood, that is on our list.
+    [00:01:30] Marta: oh, and the export problem is gone. Since your October update our big weekly export finishes in under a minute.
+    [00:02:10] Dev: and the other thing we ran into this month, compliance asked who exported what, and we can't tell. "I can't see who exported which workspace or when, and our auditors want that."
+    [00:02:50] Sam: that's an audit trail, noted.
+    [00:04:05] Dev: we'd also love a Slack integration at some point, but that's a nice to have.
+    [00:04:20] Sam: we could maybe look at a Slack app next year, no promises.
+    [00:05:00] Marta: sure, just a thought.
+    [00:05:40] Sam: on SSO, I'll send you our SAML setup guide and the planned release window by Friday the 27th.
+    [00:05:55] Marta: perfect, that helps me brief our admins.
+    [00:06:30] Dev: one question, does the Business plan include SSO?
+    [00:06:45] Sam: I'm not sure, I'll have to check.
+    [00:07:10] Marta: okay. Let's talk again in December.
+    [00:07:20] Sam: sounds good, thanks both.
+  max_turns: 50
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?okf-docs"'
+  - name: no-edit-before-approval
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+  - name: no-brain-write-before-approval
+    type: tool_used
+    tool: Write
+    input_match: '"file_path"\s*:\s*"[^"]*brain/'
+    min: 0
+    max: 0
+  - name: understands-then-extracts
+    type: llm
+    criteria: |
+      Ground truth from the brain. The earlier Globex call (assets/2026-05-28-customer-call-globex.md) covered export speed and SSO. market/audiences.md already records that workspace admins need SAML SSO before rollout. The observation observations/2026-06-01-exports-too-slow.md records that exports over 100 MB take more than ten minutes, and the earlier call put Globex's weekly 300 MB export at about fifteen minutes.
+      In the new call: (a) the SAML SSO need is restated, so it is already known; (b) Dev's missing audit trail ("who exported which workspace or when") is a new need; (c) Marta says that since the October update their big weekly export finishes in under a minute, which contradicts observations/2026-06-01-exports-too-slow.md and the earlier call; (d) Sam commits to sending the SAML setup guide and release window by Friday 2026-11-27, a clear action with owner and date; (e) the Slack app is a look-alike (a nice-to-have and "maybe, no promises"), and whether the Business plan includes SSO is an open question nobody answered.
+      PASS only if the reply (1) restates the meeting at the top: a follow-up customer call with Globex and what it was about (the purpose may be implied, such as picking up SSO and exports from the last call); (2) connects it to the earlier call or existing files by name or path; (3) does not present the SSO need as a new finding (it may say it is already recorded or add the call as corroboration); (4) proposes the audit-trail need as an observation, with a short verbatim customer quote; (5) flags the faster exports as a conflict with observations/2026-06-01-exports-too-slow.md (it may propose retiring or updating that observation after approval) and does not change it silently; (6) lists Sam sending the SAML guide and release window by 2026-11-27 as an action with owner and date; (7) does not record the Slack app as an action, decision or observation (mentioning it in the meeting summary as a non-commitment, or asking whether to record it, is fine); (8) shows a preview and waits for approval before writing.
+      FAIL if the reply says it already wrote or changed files, records the SSO need as a new observation, ignores the export contradiction or presents slow exports as still current, omits the quote or owner or date, records the Slack idea as an action, decision or observation, or gives no restatement of the meeting.

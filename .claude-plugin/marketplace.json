@@ -1,0 +1,31 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "waybound",
+  "metadata": {
+    "description": "Claude Code plugins by Waybound."
+  },
+  "owner": {
+    "name": "Waybound"
+  },
+  "plugins": [
+    {
+      "name": "okf-docs",
+      "description": "Documentation built on the Open Knowledge Format (OKF): repo docs and AGENTS.md for coding agents, a company brain for team and business knowledge, and public help, developer and changelog pages without AI bloat. One skill, six commands: init, write, ask, check, sync, publish.",
+      "version": "1.0.5",
+      "author": {
+        "name": "tgundhus"
+      },
+      "homepage": "https://github.com/AdventurersDev/okf-docs",
+      "repository": "https://github.com/AdventurersDev/okf-docs",
+      "source": "./okf-docs",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "okf",
+        "knowledge-base",
+        "agents-md",
+        "docs-as-code"
+      ]
+    }
+  ]
+}
