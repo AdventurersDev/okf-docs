@@ -1,0 +1,65 @@
+schema_version: "1.1"
+name: ingest-meeting
+description: >-
+  Pasted meeting notes become an asset file plus claims filed in the brain; the one-customer
+  finding becomes an observation that expires and cites the asset, and the contact's phone
+  number is never copied.
+tags: [write, brain]
+execution:
+  prompt: |
+    Add these notes from our call with Initech to the company brain.
+
+    Call with Initech, 2026-11-12. Attendees: Dana Kim (Initech IT lead, +1 415 555 0142), Sam (Acme sales).
+    - Initech has 240 employees; their ops team of 30 would use Acme.
+    - They need SAML SSO before rollout. Their identity provider is Okta.
+    - Dana said exports of their 2 GB workspace time out on our current limits.
+    - We agreed to offer Initech a 60-day pilot at no cost, starting 2026-12-01. Sam owns it.
+  max_turns: 50
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?okf-docs"'
+  - name: asset-file
+    type: regex
+    target: files
+    pattern: '(?:^|/)brain/assets/\d{4}-\d\d-\d\d-[a-z0-9-]+\.md$'
+    flags: m
+  - name: asset-records-origin
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*brain/assets/\d{4}-\d\d-\d\d-[^"/]+\.md")(?=.*[Pp]asted in (?:the )?conversation)'
+  - name: observation-file
+    type: regex
+    target: files
+    pattern: '(?:^|/)brain/observations/\d{4}-\d\d-\d\d-[a-z0-9-]+\.md$'
+    flags: m
+  - name: observation-expires
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*brain/observations/)(?=.*stale_after: (?:\\")?\d{4}-\d\d-\d\d)'
+  - name: observation-cites-asset
+    type: tool_used
+    tool: Write
+    input_match: '^(?=.*"file_path"\s*:\s*"[^"]*brain/observations/)(?=.*resource: (?:\\")?\.\./assets/\d{4}-\d\d-\d\d-)'
+  - name: no-phone-number-written
+    type: tool_used
+    tool: Write
+    input_match: '555\D{0,3}0142'
+    min: 0
+    max: 0
+  - name: no-phone-number-edited
+    type: tool_used
+    tool: Edit
+    input_match: '555\D{0,3}0142'
+    min: 0
+    max: 0
+  - name: reports-where-claims-went
+    type: llm
+    criteria: |
+      PASS if the reply says where the claims from the notes went, with file paths, and treats the 2 GB export timeout as one customer's observation rather than an established fact.
+      FAIL if it gives no file paths, or presents the export timeout as a confirmed fact about the product.

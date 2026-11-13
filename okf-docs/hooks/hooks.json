@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "S=\"${CLAUDE_PLUGIN_ROOT}/skills/okf-docs/scripts/okf.py\"; [ -f \"$S\" ] || exit 0; for P in python3 python \"py -3\"; do $P -c \"import sys; sys.exit(sys.version_info < (3, 8))\" </dev/null >/dev/null 2>&1 && { $P \"$S\" session-start; exit 0; }; done; exit 0",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "S=\"${CLAUDE_PLUGIN_ROOT}/skills/okf-docs/scripts/okf.py\"; [ -f \"$S\" ] || exit 0; for P in python3 python \"py -3\"; do $P -c \"import sys; sys.exit(sys.version_info < (3, 8))\" </dev/null >/dev/null 2>&1 && { $P \"$S\" hook --state \"${CLAUDE_PLUGIN_DATA}\"; exit 0; }; done; exit 0",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

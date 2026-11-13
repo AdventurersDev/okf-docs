@@ -1,0 +1,55 @@
+# okf-docs project config. Written by /okf-docs init; safe to edit. Commit it.
+okf_docs: 1
+
+# Core is always on. Add the modules this project uses: code, brain, publish.
+modules: [code]
+
+# One entry per bundle, with path relative to the project root.
+# kind: docs, brain, site or other. preset: one from the plugin's presets folder.
+# scope: the root subject for files that don't set their own.
+bundles:
+  - path: docs
+    kind: docs
+    preset: service
+    scope: acme-api
+
+# Bundles this one links to, such as the company brain: the URL that links use,
+# and an optional local checkout so check can follow those links.
+# related:
+#   brain:
+#     url: https://github.com/acme/brain/blob/main/brain
+#     path: ../brain/brain
+
+# relative (default), or rooted: /-prefixed links resolved from the bundle root.
+links: relative
+
+# Hooks (Claude Code only).
+# session: at session start, tells the agent these docs exist and when to use them.
+# edits: after an edit, reminds the agent once about docs that cite the edited
+# file, and reports format problems in edited docs. Off by default.
+hooks:
+  session: true
+  edits: false
+  max_findings: 5
+
+# Soft decay: a file's weight halves every half-life, looked up by type, then
+# class, then default. never: no decay.
+decay:
+  default: 12mo
+  observation: 3mo
+  runbook: 6mo
+  decision: never
+  asset: never
+  release: never
+  update: never
+
+# Brain module: raw asset files older than this, by the date their name starts
+# with, are proposed for deletion. Their metadata files stay.
+retention:
+  raw_files: 24mo
+
+# Publish module. targets: help-center, developer, changelog, updates.
+# tool: mkdocs, docusaurus, starlight, vitepress or none.
+publish:
+  targets: []
+  tool: none

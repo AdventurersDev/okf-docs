@@ -1,0 +1,38 @@
+schema_version: "1.1"
+name: status-menu
+description: >-
+  The bare command, in a project without OKF docs, shows a short status that suggests init
+  and changes nothing.
+tags: [smoke, routing]
+execution:
+  prompt: "/okf-docs"
+  max_turns: 15
+  timeout_seconds: 300
+  allowed_tools: [Read, Glob, Grep, Skill, Bash]
+context:
+  scaffold_script: scaffold.sh
+graders:
+  - name: read-context
+    type: tool_used
+    tool: Bash
+    input_match: 'okf\.py[\s\S]*\bcontext\b'
+    arm: with-only
+  - name: suggests-init
+    type: regex
+    target: last_message
+    pattern: '/okf-docs(?::okf-docs)? init\b'
+  - name: no-write
+    type: tool_used
+    tool: Write
+    min: 0
+    max: 0
+  - name: no-edit
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+  - name: short-status
+    type: llm
+    criteria: |
+      PASS if all of these hold: the reply says there are no OKF docs here yet; it suggests `/okf-docs init`; it offers at most three suggestions; it doesn't begin the setup itself, meaning it asks no setup questions and presents no plan for the user to approve (saying briefly what init would scan or set up is fine); and the whole reply is about ten lines or fewer.
+      FAIL if any of these doesn't hold.

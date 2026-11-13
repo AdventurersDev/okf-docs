@@ -1,0 +1,9 @@
+okf_docs: 1
+modules: [brain]
+bundles:
+  - path: brain
+    kind: brain
+    preset: company
+    scope: acme
+retention:
+  raw_files: 24mo

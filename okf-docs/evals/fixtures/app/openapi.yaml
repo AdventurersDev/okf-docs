@@ -1,0 +1,41 @@
+openapi: 3.1.0
+info:
+  title: Tally API
+  version: 0.4.0
+paths:
+  /invoices:
+    get:
+      summary: List invoices, newest first
+      responses:
+        "200":
+          description: The invoices
+    post:
+      summary: Create an invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customerId, amountCents]
+              properties:
+                customerId:
+                  type: string
+                amountCents:
+                  type: integer
+                  minimum: 1
+      responses:
+        "201":
+          description: The created invoice
+  /invoices/{id}/pay:
+    post:
+      summary: Mark an invoice as paid
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The paid invoice

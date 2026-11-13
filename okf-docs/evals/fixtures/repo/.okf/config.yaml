@@ -1,0 +1,17 @@
+# okf-docs project config. Written by /okf-docs init; safe to edit.
+okf_docs: 1
+modules: [code, publish]
+bundles:
+  - path: docs
+    kind: docs
+    preset: service
+    scope: acme-api
+  - path: help
+    kind: site
+    preset: help-center
+links: relative
+hooks:
+  edits: true
+  max_findings: 5
+publish:
+  targets: [help-center]
